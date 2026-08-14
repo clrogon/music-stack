@@ -223,4 +223,5 @@ docs pipeline without extracting them from this file:
 | `docs/diagrams/post-config-sequence.mmd` | §5 Post-configuration over REST |
 
 If you change one, change both copies — they're plain duplicated content, not generated from a
-single source.
+single source. Note the §1 overview diagram also appears inline in `README.md`, so a change
+touches three places.

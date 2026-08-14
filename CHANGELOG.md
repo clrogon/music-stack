@@ -6,6 +6,12 @@ recent first.
 
 ## Unreleased
 
+### Added
+
+- **Badges** (platform, languages, status, release) on the README.
+- **Mermaid system-overview diagram** inline in the README (replaces the ASCII art).
+- **`ROADMAP.md`** — planned work in priority order, mirroring `ARCHITECTURE.md` §7 gaps.
+
 ## v0.3.0 - Documentation
 
 ### Added

@@ -1,5 +1,16 @@
 # music-stack
 
+<p align="center">
+  <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%2F11-0078D4">
+  <img alt="macOS Intel" src="https://img.shields.io/badge/macOS-Intel-lightgrey">
+  <img alt="Raspberry Pi" src="https://img.shields.io/badge/Raspberry%20Pi-3%2F4%2F5-A22846">
+  <img alt="PowerShell" src="https://img.shields.io/badge/PowerShell-5.1%2B-5391FE">
+  <img alt="Bash" src="https://img.shields.io/badge/Bash-POSIX-4EAA25">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3-3776AB">
+  <img alt="Status" src="https://img.shields.io/badge/Status-Active-success">
+  <img alt="Release" src="https://img.shields.io/github/v/release/clrogon/music-stack">
+</p>
+
 A personal, self-hosted music listening + library-completion stack, installed **natively** (no Docker) on three platforms: **Windows**, **macOS (Intel)**, and **Raspberry Pi**.
 
 Three services, one shared music folder:
@@ -12,23 +23,26 @@ Three services, one shared music folder:
 
 **The only contract between them is the filesystem:** Lidarr's *root folder* is the same directory as Navidrome's *MusicFolder*. Lidarr fills it; Navidrome scans and streams it. Nothing else connects them.
 
-```
-                          ┌────────────────────┐
-   albums you're missing →│      Lidarr        │
-                          │  root folder =     │
-                          │  MUSIC_DIR         │
-                          └─────────┬──────────┘
-                                    │ downloads via qBittorrent,
-                                    │ tags + renames into MUSIC_DIR
-                                    ▼
-                          ┌────────────────────┐
-                          │     MUSIC_DIR      │  (the shared contract)
-                          └─────────┬──────────┘
-                                    │ scans + streams
-                                    ▼
-                          ┌────────────────────┐
-                          │     Navidrome      │──► browser + Subsonic apps
-                          └────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Grab["Acquisition side"]
+        Lidarr["Lidarr — artist monitor +\nmatch against what you own"]
+        Qbit["qBittorrent — torrent client\n(only consumer of Lidarr's downloads)"]
+    end
+    subgraph Library["The shared contract"]
+        MusicDir["MUSIC_DIR\n(Lidarr root folder == Navidrome MusicFolder)"]
+    end
+    subgraph Stream["Listening side"]
+        Navidrome["Navidrome — scanner + streamer"]
+        Clients["Browser / Symfonium /\nDSub / iOS Music / ..."]
+    end
+
+    Lidarr -->|"grabs missing albums via the\nqBittorrent WebUI API (host, port, creds)"| Qbit
+    Qbit -->|"tags + renames into"| MusicDir
+    MusicDir -->|"file watcher + scan schedule"| Navidrome
+    Navidrome -->|"Subsonic API"| Clients
+
+    style MusicDir fill:#0a0a0a,stroke-dasharray: 5 5
 ```
 
 For the *why* behind this shape — the contract, the three-platform parity rule, and how
@@ -142,6 +156,7 @@ bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.
   qBittorrent v5's WebUI traps).
 - **[MAINTENANCE.md](MAINTENANCE.md)** — for developers modifying the scripts: the parity rule,
   config generation (BOM-less writes, PBKDF2), the post-config call, and the validation steps.
+- **[ROADMAP.md](ROADMAP.md)** — what's planned, in priority order.
 - **[CHANGELOG.md](CHANGELOG.md)** — version history.
 
 ## Access from other devices
