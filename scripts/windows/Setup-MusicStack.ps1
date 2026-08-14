@@ -58,6 +58,13 @@ function Remove-ServiceIfPresent {
     }
 }
 
+# Write text as UTF-8 WITHOUT a BOM. PS 5.1's Set-Content -Encoding UTF8 prepends
+# a BOM, which Navidrome's TOML parser rejects with a fatal parse error.
+function Write-Utf8NoBom {
+    param([string]$Path, [string]$Value)
+    [System.IO.File]::WriteAllText($Path, $Value, (New-Object System.Text.UTF8Encoding($false)))
+}
+
 # -------------------------------------------------------------- elevation --
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if (-not $Settings) { $Settings = Join-Path $repoRoot 'settings.env' }
@@ -93,7 +100,7 @@ function Initialize-SettingsFile {
         $gen = -join ((48..57) + (97..102) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
         if ($idx -ge 0) { $lines[$idx] = "QBIT_PASSWORD=$gen" }
         else { $lines += "QBIT_PASSWORD=$gen" }
-        $lines | Set-Content -LiteralPath $script:SettingsFile -Encoding UTF8
+        Write-Utf8NoBom -Path $script:SettingsFile -Value ($lines -join "`n")
         Write-Warn "QBIT_PASSWORD was empty - generated one and saved it to $($script:SettingsFile): $gen"
         return
     }
@@ -107,7 +114,7 @@ function Initialize-SettingsFile {
     for ($i = 0; $i -lt $lines.Count; $i++) {
         if ($lines[$i] -match '^QBIT_PASSWORD=') { $lines[$i] = "QBIT_PASSWORD=$gen"; break }
     }
-    $lines | Set-Content -LiteralPath $script:SettingsFile -Encoding UTF8
+    Write-Utf8NoBom -Path $script:SettingsFile -Value ($lines -join "`n")
     Write-Warn "Created $($script:SettingsFile) with a generated qBittorrent WebUI password: $gen"
     Write-Warn "  WebUI username: $(Get-Setting 'QBIT_USER' 'admin')"
     Write-Warn "  Save it now - it is printed only on first setup."
@@ -128,12 +135,18 @@ $lidarrKey     = Get-Setting 'LIDARR_API_KEY' ''
 $scanSchedule  = Get-Setting 'NAVIDROME_SCAN_SCHEDULE' ''
 
 if (-not $lidarrKey) {
-    $lidarrKey = -join ((48..57) + (97..102) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+    # Get-Random -Count samples without replacement, so it cannot exceed the
+    # 16-item hex pool - build the key one character at a time for a true 32.
+    $lidarrKey = -join (1..32 | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
     Write-Log "Generated Lidarr API key"
 }
 
 $ndHome = 'C:\Program Files\Navidrome'
+# The Servarr installer places Lidarr under C:\ProgramData\Lidarr\bin, NOT
+# Program Files. Resolve the real binary from either location below.
+$lidarrInstall = 'C:\ProgramData\Lidarr'
 $lidarrHome = 'C:\Program Files\Lidarr'
+$lidarrExe = $null
 $ndData  = Join-Path $dataDir 'navidrome'
 $lidarrData = Join-Path $dataDir 'lidarr'
 $logs    = Join-Path $dataDir 'logs'
@@ -146,8 +159,11 @@ foreach ($d in @($musicDir, $downloadDir, $ndData, $lidarrData, $logs, $work)) {
 }
 # NOTE: ${env:USERNAME} (braces) is required - "$env:USERNAME:" would parse the
 # colon as part of the variable name and produce a valueless ACE.
-icacls.exe $musicDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" | Out-Null
-icacls.exe $downloadDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" | Out-Null
+# Everyone is granted because Lidarr's writability check runs under the machine
+# account (which cannot be named on a workgroup box), and NSSM services run as
+# LocalSystem - both are members of Everyone.
+icacls.exe $musicDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" "Everyone:(OI)(CI)(M)" | Out-Null
+icacls.exe $downloadDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" "Everyone:(OI)(CI)(M)" | Out-Null
 
 # ------------------------------------------------------------- dependencies --
 Write-Log "Installing ffmpeg via winget..."
@@ -213,18 +229,31 @@ Scanner.WatcherWait = '5s'
 $navidromeToml = $navidromeToml.Replace('{PORT}', $ndPort).Replace('{MUSIC}', $musicDir)
 $navidromeToml = $navidromeToml.Replace('{DATA}', $ndData).Replace('{FFMPEG}', $ffmpegLine)
 $navidromeToml = $navidromeToml.Replace('{SCHEDULE}', $scheduleLine)
-Set-Content -LiteralPath (Join-Path $ndData 'navidrome.toml') -Value $navidromeToml -Encoding UTF8
+# BOM-less UTF-8 is mandatory: Navidrome's TOML parser rejects a BOM'd file.
+Write-Utf8NoBom -Path (Join-Path $ndData 'navidrome.toml') -Value $navidromeToml
 Write-Log "Wrote navidrome.toml (music: $musicDir)"
 
 # ------------------------------------------------------------------ lidarr --
-if (-not (Test-Path (Join-Path $lidarrHome 'Lidarr.exe'))) {
+# The Servarr installer puts Lidarr under C:\ProgramData\Lidarr\bin, not
+# Program Files. Resolve the real binary from either location.
+$lidarrCandidates = @((Join-Path $lidarrInstall 'bin\Lidarr.exe'), (Join-Path $lidarrHome 'Lidarr.exe'))
+$lidarrExe = $lidarrCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+
+if (-not $lidarrExe) {
     Write-Log "Downloading Lidarr installer..."
     $lidarrInstaller = Join-Path $work 'Lidarr-installer.exe'
     Invoke-WebRequest -Uri 'https://lidarr.servarr.com/v1/update/master/updatefile?os=windows&runtime=netcore&arch=x64&installer=true' `
         -OutFile $lidarrInstaller
     Write-Log "Installing Lidarr silently..."
     Start-Process -Wait -FilePath $lidarrInstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'
+    $lidarrExe = $lidarrCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 }
+
+if (-not $lidarrExe) {
+    Write-Err "Lidarr.exe not found after install (looked in $lidarrInstall and $lidarrHome)"
+    exit 1
+}
+$lidarrHome = Split-Path -Parent $lidarrExe
 
 # Stop the installer-managed service (if any) so we take over via NSSM.
 Remove-ServiceIfPresent 'Lidarr'
@@ -241,30 +270,55 @@ $lidarrConfig = @'
 </Config>
 '@
 $lidarrConfig = $lidarrConfig.Replace('{PORT}', $lidarrPort).Replace('{KEY}', $lidarrKey)
-Set-Content -LiteralPath (Join-Path $lidarrData 'config.xml') -Value $lidarrConfig -Encoding UTF8
+Write-Utf8NoBom -Path (Join-Path $lidarrData 'config.xml') -Value $lidarrConfig
 Write-Log "Wrote Lidarr config.xml (port $lidarrPort)"
 
 # ----------------------------------------------------------------- qbittorrent --
+# qBittorrent 5.2+ reads qBittorrent.ini on Windows; older builds read
+# qBittorrent.conf. Seed both so the WebUI comes up regardless of version.
 $qbitConf = Join-Path $env:APPDATA 'qBittorrent\qBittorrent.conf'
+$qbitIni  = Join-Path $env:APPDATA 'qBittorrent\qBittorrent.ini'
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $qbitConf) | Out-Null
+# qBittorrent 5.x reads only WebUI\Password_PBKDF2 (PBKDF2-HMAC-SHA512,
+# base64(salt):base64(key)); the old MD5 WebUI\Password is kept for <=5.1.
 $md5 = [System.Security.Cryptography.MD5]::Create()
 $hash = [System.BitConverter]::ToString($md5.ComputeHash([System.Text.Encoding]::UTF8.GetBytes("WebUI API:$qbitPassword")))
 $hash = $hash.Replace('-', '').ToLowerInvariant()
+$salt = New-Object byte[] 16
+(New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($salt)
+$der = New-Object System.Security.Cryptography.Rfc2898DeriveBytes(
+    $qbitPassword, $salt, 100000, [System.Security.Cryptography.HashAlgorithmName]::SHA512)
+$pbkdf2 = [Convert]::ToBase64String($salt) + ':' + [Convert]::ToBase64String($der.GetBytes(64))
 $qbitConfBody = @"
 [LegalNotice]
 Accepted=true
+
 [Preferences]
 WebUI\Enabled=true
 WebUI\Port=$qbitPort
 WebUI\Username=$qbitUser
 WebUI\Password=@ByteArray($hash)
+WebUI\Password_PBKDF2=@ByteArray($pbkdf2)
 WebUI\LocalHostAuth=false
 Session\DefaultSavePath=$downloadDir
 Session\TempPath=$downloadDir
 Session\DiskWriteCacheSize=32
 "@
-Set-Content -LiteralPath $qbitConf -Value $qbitConfBody -Encoding UTF8
+Write-Utf8NoBom -Path $qbitConf -Value $qbitConfBody
+Write-Utf8NoBom -Path $qbitIni -Value $qbitConfBody
 Write-Log "Pre-seeded qBittorrent WebUI config (port $qbitPort)"
+
+# Launch qBittorrent so Lidarr's download-client registration can reach it.
+# --confirm-legal-notice suppresses the first-run legal dialog, which would
+# otherwise block WebUI startup.
+$qbitExe = 'C:\Program Files\qBittorrent\qbittorrent.exe'
+if (Test-Path -LiteralPath $qbitExe) {
+    Start-Process -FilePath $qbitExe -ArgumentList '--confirm-legal-notice'
+    Write-Log "Started qBittorrent (WebUI http://localhost:$qbitPort)"
+}
+else {
+    Write-Warn "qBittorrent not found at $qbitExe - start it manually before the Lidarr post-config."
+}
 
 # ----------------------------------------------------------------- services --
 # Send the start control, then poll for Running. First boot can be slow
@@ -312,10 +366,25 @@ Write-Log "Registering Lidarr service..."
 Start-ServiceWait -Name 'Lidarr'
 
 # -------------------------------------------------------- lidarr post-config --
+# Lidarr rewrites config.xml itself; re-read the key it actually stored so the
+# post-config talks to the right instance.
+$liveConfigPath = Join-Path $lidarrData 'config.xml'
+if (Test-Path -LiteralPath $liveConfigPath) {
+    try {
+        $liveKey = ([xml](Get-Content -LiteralPath $liveConfigPath)).Config.ApiKey
+        if ($liveKey) {
+            if ($liveKey -ne $lidarrKey) { Write-Log "Lidarr stored its own API key; using the live value." }
+            $lidarrKey = $liveKey
+        }
+    }
+    catch { Write-Warn "Could not re-read Lidarr API key: $($_.Exception.Message)" }
+}
+
 Write-Log "Waiting for Lidarr API, then applying settings..."
 $python = if ($py -eq 'py') { 'py' } else { $py }
 & $python (Join-Path $repoRoot 'scripts\common\configure-lidarr.py') `
-    --settings $Settings --api-key $lidarrKey --port $lidarrPort
+    --settings $Settings --api-key $lidarrKey --port $lidarrPort `
+    --music-dir $musicDir --qbit-user $qbitUser --qbit-password $qbitPassword --qbit-port $qbitPort
 if ($LASTEXITCODE -ne 0) { Write-Warn "Lidarr post-config failed (exit $LASTEXITCODE) - run it again after Lidarr is up." }
 
 # ------------------------------------------------------------------ summary --

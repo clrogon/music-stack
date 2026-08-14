@@ -120,6 +120,9 @@ fi
 
 # ---------------------------------------------------------- qbittorrent-nox --
 QBIT_HASH="$(printf 'WebUI API:%s' "$QBIT_PASSWORD" | md5sum | awk '{print $1}')"
+QBIT_PBKDF2="$(ms_qbit_pbkdf2 "$QBIT_PASSWORD" || true)"
+PBKDF2_LINE=""
+[[ -n "$QBIT_PBKDF2" ]] && PBKDF2_LINE="WebUI\\Password_PBKDF2=@ByteArray($QBIT_PBKDF2)"
 if [[ ! -f "$QBIT_CONF" ]] || ! grep -q 'WebUI\\Enabled=true' "$QBIT_CONF"; then
   cat > "$QBIT_CONF" <<EOF
 [LegalNotice]
@@ -129,6 +132,7 @@ WebUI\\Enabled=true
 WebUI\\Port=$QBIT_PORT
 WebUI\\Username=$QBIT_USER
 WebUI\\Password=@ByteArray($QBIT_HASH)
+$PBKDF2_LINE
 WebUI\\LocalHostAuth=false
 Session\\DefaultSavePath=$DOWNLOAD_DIR
 Session\\TempPath=$DOWNLOAD_DIR
@@ -200,7 +204,7 @@ done
 ms_log "systemd services enabled and started"
 
 # -------------------------------------------------------- lidarr post-config --
-ms_configure_lidarr "$LIDARR_KEY" "$LIDARR_PORT" "$MS_SETTINGS" "$(command -v python3)"
+ms_configure_lidarr "$LIDARR_KEY" "$LIDARR_PORT" "$MS_SETTINGS" "$(command -v python3)" "$MUSIC_DIR" "$QBIT_USER" "$QBIT_PASSWORD" "$QBIT_PORT"
 
 # ------------------------------------------------------------------ summary --
 cat <<EOF

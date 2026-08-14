@@ -31,6 +31,20 @@ def log(msg: str) -> None:
     print(f"[+] {msg}", flush=True)
 
 
+def wait_for_port(host: str, port: int, seconds: int) -> None:
+    """Wait until a TCP port accepts connections (e.g. qBittorrent's WebUI)."""
+    import socket
+
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=3):
+                return
+        except OSError:
+            time.sleep(2)
+    die(f"port {host}:{port} did not open within {seconds}s - is qBittorrent running?")
+
+
 def die(msg: str) -> None:
     print(f"[x] {msg}", file=sys.stderr, flush=True)
     sys.exit(1)
@@ -104,7 +118,23 @@ class Lidarr:
         if music_dir in existing:
             log(f"root folder already configured: {music_dir}")
             return
-        self._request("POST", "/rootfolder", {"path": music_dir})
+        # Lidarr v3 requires a full RootFolderResource (name + profile ids),
+        # not just the path. Pick the first quality/metadata profiles.
+        profiles = self._request("GET", "/qualityprofile") or []
+        meta = self._request("GET", "/metadataprofile") or []
+        if not profiles or not meta:
+            die("Lidarr has no quality/metadata profiles yet - open the UI once first")
+        leaf = os.path.basename(music_dir.rstrip("/\\")) or music_dir
+        body = {
+            "name": leaf,
+            "path": music_dir,
+            "defaultMetadataProfileId": meta[0]["id"],
+            "defaultQualityProfileId": profiles[0]["id"],
+            "defaultMonitorOption": "all",
+            "defaultNewItemMonitorOption": "all",
+            "defaultTags": [],
+        }
+        self._request("POST", "/rootfolder", body)
         log(f"root folder created: {music_dir}")
 
     def ensure_qbit_client(self, host: str, port: int, user: str, password: str) -> None:
@@ -215,6 +245,8 @@ def main() -> None:
     lidarr = Lidarr(args.host, port, api_key, timeout=args.timeout)
     log(f"waiting for Lidarr at {lidarr.base}")
     lidarr.wait_ready(args.timeout)
+    log(f"waiting for qBittorrent WebUI on {qbit_host}:{qbit_port}")
+    wait_for_port(qbit_host, qbit_port, 120)
     lidarr.ensure_root_folder(music_dir)
     lidarr.ensure_qbit_client(qbit_host, qbit_port, qbit_user, qbit_password)
     lidarr.enable_naming()

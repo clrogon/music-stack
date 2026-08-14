@@ -151,9 +151,28 @@ ms_latest_lidarr() {
 }
 
 # ----------------------------------------------------------- post configure --
-# ms_configure_lidarr <api_key> <port> <settings_file> <python>
+# ms_qbit_pbkdf2 <password> — echoes base64(salt):base64(PBKDF2-HMAC-SHA512(
+# password, salt, 100000, 64 bytes)), qBittorrent 5.x's WebUI\Password_PBKDF2.
+# Requires python3 (already a dependency of configure-lidarr.py). Empty output
+# means python3 is unavailable; the MD5 WebUI\Password is then the only credential.
+ms_qbit_pbkdf2() {
+  local pw="$1"
+  command -v python3 >/dev/null 2>&1 || { ms_warn "python3 not available - cannot pre-seed the qBittorrent 5.x WebUI password"; return 1; }
+  python3 - "$pw" <<'PY'
+import base64, hashlib, os, sys
+pw = sys.argv[1]
+salt = os.urandom(16)
+key = hashlib.pbkdf2_hmac("sha512", pw.encode("utf-8"), salt, 100000, 64)
+print(base64.b64encode(salt).decode() + ":" + base64.b64encode(key).decode())
+PY
+}
+
+# ms_configure_lidarr <api_key> <port> <settings_file> <python> <music_dir> <qbit_user> <qbit_password> <qbit_port>
+# Passes the resolved defaults explicitly because settings.env entries can be
+# empty (the scripts own the defaults, not the example file).
 ms_configure_lidarr() {
   local api_key="$1" port="$2" settings="$3" python="$4"
+  local music_dir="$5" qbit_user="$6" qbit_password="$7" qbit_port="$8"
   local py="scripts/common/configure-lidarr.py"
   if [[ ! -f "$py" ]]; then
     # Fall back to repo-relative path when invoked from elsewhere.
@@ -162,5 +181,7 @@ ms_configure_lidarr() {
     py="$repo/scripts/common/configure-lidarr.py"
   fi
   ms_log "Configuring Lidarr (root folder, download client, naming, indexers)..."
-  "$python" "$py" --settings "$settings" --api-key "$api_key" --port "$port"
+  "$python" "$py" --settings "$settings" --api-key "$api_key" --port "$port" \
+    --music-dir "$music_dir" --qbit-user "$qbit_user" \
+    --qbit-password "$qbit_password" --qbit-port "$qbit_port"
 }
