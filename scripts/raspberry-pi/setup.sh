@@ -16,11 +16,8 @@ ms_require_cmd curl
 [[ "$EUID" -eq 0 ]] || ms_die "run as root: sudo bash scripts/raspberry-pi/setup.sh"
 
 # ---------------------------------------------------------------- settings --
-[[ -n "$MS_SETTINGS" && -f "$MS_SETTINGS" ]] \
-  || ms_die "settings.env not found. Copy settings.env.example to settings.env and set QBIT_PASSWORD."
-
+ms_ensure_settings
 QBIT_PASSWORD="$(ms_setting 'QBIT_PASSWORD')"
-[[ -n "$QBIT_PASSWORD" ]] || ms_die "QBIT_PASSWORD is empty in $MS_SETTINGS"
 
 MACHINE="$(uname -m)"
 case "$MACHINE" in

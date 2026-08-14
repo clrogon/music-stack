@@ -73,11 +73,49 @@ if (-not (Test-Admin)) {
 }
 
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Err "winget not found. Install App Installer from the Microsoft Store and retry."
+    Write-Err "winget not found. Install App Installer from the Microsoft Store, or use the one-liner"
+    Write-Err "bootstrap (scripts/windows/install.ps1), which installs winget automatically."
     exit 1
 }
 
+# ------------------------------------------------------- settings bootstrap --
+# Auto-create settings.env from the example on first run (generating a random
+# qBittorrent WebUI password), or backfill an empty QBIT_PASSWORD.
+function Initialize-SettingsFile {
+    $lines = @()
+    if (Test-Path -LiteralPath $script:SettingsFile) {
+        $lines = @(Get-Content -LiteralPath $script:SettingsFile)
+        $idx = -1
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^QBIT_PASSWORD=') { $idx = $i; break }
+        }
+        if ($idx -ge 0 -and ($lines[$idx] -split '=', 2)[1]) { return }
+        $gen = -join ((48..57) + (97..102) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
+        if ($idx -ge 0) { $lines[$idx] = "QBIT_PASSWORD=$gen" }
+        else { $lines += "QBIT_PASSWORD=$gen" }
+        $lines | Set-Content -LiteralPath $script:SettingsFile -Encoding UTF8
+        Write-Warn "QBIT_PASSWORD was empty - generated one and saved it to $($script:SettingsFile): $gen"
+        return
+    }
+    $example = Join-Path (Split-Path -Parent $script:SettingsFile) 'settings.env.example'
+    if (-not (Test-Path -LiteralPath $example)) {
+        Write-Err "No settings.env and no settings.env.example at $example"
+        exit 1
+    }
+    $gen = -join ((48..57) + (97..102) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
+    $lines = @(Get-Content -LiteralPath $example)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^QBIT_PASSWORD=') { $lines[$i] = "QBIT_PASSWORD=$gen"; break }
+    }
+    $lines | Set-Content -LiteralPath $script:SettingsFile -Encoding UTF8
+    Write-Warn "Created $($script:SettingsFile) with a generated qBittorrent WebUI password: $gen"
+    Write-Warn "  WebUI username: $(Get-Setting 'QBIT_USER' 'admin')"
+    Write-Warn "  Save it now - it is printed only on first setup."
+}
+
 # ---------------------------------------------------------------- settings --
+Initialize-SettingsFile
+
 $musicDir      = Get-Setting 'MUSIC_DIR' 'C:\Music'
 $dataDir       = Get-Setting 'DATA_DIR' 'C:\ProgramData\music-stack'
 $downloadDir   = Get-Setting 'DOWNLOAD_DIR' (Join-Path $dataDir 'downloads')
@@ -89,10 +127,6 @@ $qbitPassword  = Get-Setting 'QBIT_PASSWORD' ''
 $lidarrKey     = Get-Setting 'LIDARR_API_KEY' ''
 $scanSchedule  = Get-Setting 'NAVIDROME_SCAN_SCHEDULE' ''
 
-if (-not $qbitPassword) {
-    Write-Err "QBIT_PASSWORD is empty in $Settings. Set a qBittorrent WebUI password first."
-    exit 1
-}
 if (-not $lidarrKey) {
     $lidarrKey = -join ((48..57) + (97..102) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
     Write-Log "Generated Lidarr API key"

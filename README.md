@@ -31,17 +31,31 @@ Three services, one shared music folder:
                           └────────────────────┘
 ```
 
-## One command per machine
+## One-liner install
 
-Copy this repo to the target machine, edit `settings.env`, then run the platform script. Each script is **idempotent** — safe to re-run; it downloads the correct binaries, writes the configs, registers the services, and (once Lidarr is up) configures Lidarr itself over its REST API.
+Nothing is assumed except the shell itself — the one-liner bootstraps its own package manager (winget on Windows, Homebrew on macOS) and, if `settings.env` does not exist yet, creates it with a **randomly generated** qBittorrent password (printed once — save it). No git, no Docker, no manual downloads.
+
+| Platform | One-liner |
+| --- | --- |
+| Windows (10/11, x64) | `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/clrogon/music-stack/main/scripts/windows/install.ps1 \| iex"` |
+| macOS (Intel) | `curl -fsSL https://raw.githubusercontent.com/clrogon/music-stack/main/scripts/install.sh \| bash` |
+| Raspberry Pi (OS Lite) | `curl -fsSL https://raw.githubusercontent.com/clrogon/music-stack/main/scripts/install.sh \| sudo bash` |
+
+Run each from a normal (non-admin) shell; elevation is handled for you. The Pi command detects armv7 (Pi 2/3/Zero → armv7 build) vs arm64 (Pi 4/5 → arm64 build) automatically.
+
+What each one-liner does: fetches the repo as a tarball/zip (git not required) → installs the missing package manager (winget via the official `microsoft/winget-cli` GitHub release on Windows; Homebrew + Xcode CLT on macOS) → runs the platform setup script, which installs ffmpeg / qBittorrent / Lidarr / Navidrome, writes the configs, registers auto-start services, and post-configures Lidarr over its REST API.
+
+### Manual clone (optional)
+
+If you prefer to review or edit before running: clone, `cp settings.env.example settings.env`, set `QBIT_PASSWORD` (or leave it empty to auto-generate), then run:
 
 | Platform | Command |
 | --- | --- |
 | Windows (10/11, x64) | `powershell -ExecutionPolicy Bypass -File scripts\windows\Setup-MusicStack.ps1` (as Administrator) |
 | macOS (Intel) | `bash scripts/macos/setup.sh` |
-| Raspberry Pi (OS Lite) | `sudo bash scripts/raspberry-pi/setup.sh` (Pi 2/3/Zero → armv7 build, Pi 4/5 → arm64 build; detected automatically) |
+| Raspberry Pi (OS Lite) | `sudo bash scripts/raspberry-pi/setup.sh` |
 
-The script reads `settings.env` from the repo root (copy from `settings.env.example`). Unset values fall back to sane per-platform defaults.
+Every script is **idempotent** — safe to re-run; it downloads the correct binaries, writes the configs, registers the services, and (once Lidarr is up) configures Lidarr itself over its REST API. Unset `settings.env` values fall back to sane per-platform defaults.
 
 ## What is automated
 
@@ -80,7 +94,7 @@ The script reads `settings.env` from the repo root (copy from `settings.env.exam
 | `LIDARR_PORT` | Lidarr HTTP port | `8686` |
 | `QBIT_PORT` | qBittorrent WebUI port | `8080` |
 | `QBIT_USER` | qBittorrent WebUI username | `admin` |
-| `QBIT_PASSWORD` | qBittorrent WebUI password | required |
+| `QBIT_PASSWORD` | qBittorrent WebUI password (leave empty to auto-generate) | auto-generated |
 | `LIDARR_API_KEY` | Lidarr API key (leave empty to auto-generate) | auto |
 | `NAVIDROME_SCAN_SCHEDULE` | Cron-style rescan (e.g. `@every 12h`); empty = file watcher only | empty |
 
@@ -94,10 +108,13 @@ music-stack/
 ├── config/
 │   ├── indexers.example.json      ← optional indexers for Lidarr
 ├── scripts/
+│   ├── install.sh                 ← one-liner bootstrap (macOS + Raspberry Pi)
 │   ├── common/
 │   │   ├── lib.sh                 ← POSIX helpers shared by macOS + Pi
 │   │   └── configure-lidarr.py    ← Lidarr post-config over REST API
-│   ├── windows/Setup-MusicStack.ps1
+│   ├── windows/
+│   │   ├── install.ps1            ← one-liner bootstrap (installs winget if absent)
+│   │   └── Setup-MusicStack.ps1
 │   ├── macos/setup.sh
 │   └── raspberry-pi/setup.sh
 ```
@@ -108,7 +125,7 @@ music-stack/
 # Windows script lint (warnings and above are failures):
 Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSScriptAnalyzerSettings.psd1
 # bash syntax check (requires Git Bash or any bash):
-bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.sh
+bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.sh scripts/install.sh
 ```
 
 ## Access from other devices

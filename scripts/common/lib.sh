@@ -16,15 +16,44 @@ ms_require_cmd() {
 }
 
 # ----------------------------------------------------------------- settings --
-# Locate settings.env: $MS_SETTINGS, else ./settings.env, else repo-root.
+# Resolve settings.env: $MS_SETTINGS, else ./settings.env, else repo-root
+# settings.env. Always set (even if the file does not exist yet) so that
+# ms_ensure_settings can create it on first run.
 MS_SETTINGS="${MS_SETTINGS:-}"
 if [[ -z "$MS_SETTINGS" ]]; then
   if [[ -f "./settings.env" ]]; then
-    MS_SETTINGS="./settings.env"
-  elif [[ -f "$(dirname "${BASH_SOURCE[0]}")/../settings.env" ]]; then
-    MS_SETTINGS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/settings.env"
+    MS_SETTINGS="$(pwd -P)/settings.env"
+  else
+    MS_SETTINGS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/settings.env"
   fi
 fi
+
+# ms_ensure_settings — create settings.env from the example (with a generated
+# qBittorrent WebUI password) if it is missing, or backfill a missing password
+# into an existing file. The generated password is printed once.
+ms_ensure_settings() {
+  local gen
+  if [[ -f "$MS_SETTINGS" ]]; then
+    if [[ -z "$(ms_setting 'QBIT_PASSWORD')" ]]; then
+      gen="$(ms_random_hex 16)"
+      sed "s/^QBIT_PASSWORD=$/QBIT_PASSWORD=$gen/" "$MS_SETTINGS" > "$MS_SETTINGS.tmp" \
+        && mv "$MS_SETTINGS.tmp" "$MS_SETTINGS"
+      ms_warn "QBIT_PASSWORD was empty - generated one and saved it to $MS_SETTINGS"
+      ms_warn "  WebUI username: $(ms_setting 'QBIT_USER' 'admin')"
+      ms_warn "  WebUI password: $gen"
+    fi
+    return 0
+  fi
+  local example
+  example="$(dirname "$MS_SETTINGS")/settings.env.example"
+  [[ -f "$example" ]] || ms_die "no settings.env and no settings.env.example next to it"
+  gen="$(ms_random_hex 16)"
+  sed "s/^QBIT_PASSWORD=$/QBIT_PASSWORD=$gen/" "$example" > "$MS_SETTINGS"
+  ms_warn "Created $MS_SETTINGS with a generated qBittorrent WebUI password:"
+  ms_warn "  WebUI username: $(ms_setting 'QBIT_USER' 'admin')"
+  ms_warn "  WebUI password: $gen"
+  ms_warn "Save it now - it is printed only on first setup."
+}
 
 # ms_setting <key> [default] — value of KEY in settings.env, or default.
 ms_setting() {
