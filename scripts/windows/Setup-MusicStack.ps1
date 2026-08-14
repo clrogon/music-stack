@@ -59,7 +59,7 @@ function Remove-ServiceIfPresent {
 }
 
 # -------------------------------------------------------------- elevation --
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if (-not $Settings) { $Settings = Join-Path $repoRoot 'settings.env' }
 $script:SettingsFile = $Settings
 
@@ -144,8 +144,10 @@ $work    = Join-Path $env:TEMP 'music-stack-install'
 foreach ($d in @($musicDir, $downloadDir, $ndData, $lidarrData, $logs, $work)) {
     New-Item -ItemType Directory -Force -Path $d | Out-Null
 }
-icacls.exe $musicDir /grant "SYSTEM:(OI)(CI)M" "$env:USERNAME:(OI)(CI)M" | Out-Null
-icacls.exe $downloadDir /grant "SYSTEM:(OI)(CI)M" "$env:USERNAME:(OI)(CI)M" | Out-Null
+# NOTE: ${env:USERNAME} (braces) is required - "$env:USERNAME:" would parse the
+# colon as part of the variable name and produce a valueless ACE.
+icacls.exe $musicDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" | Out-Null
+icacls.exe $downloadDir /grant "SYSTEM:(OI)(CI)(M)" "${env:USERNAME}:(OI)(CI)(M)" | Out-Null
 
 # ------------------------------------------------------------- dependencies --
 Write-Log "Installing ffmpeg via winget..."
@@ -265,6 +267,28 @@ Set-Content -LiteralPath $qbitConf -Value $qbitConfBody -Encoding UTF8
 Write-Log "Pre-seeded qBittorrent WebUI config (port $qbitPort)"
 
 # ----------------------------------------------------------------- services --
+# Send the start control, then poll for Running. First boot can be slow
+# (Navidrome creates its DB), so a bare `nssm start` would report a transient
+# SERVICE_PAUSED/STOPPED status and look like a failure.
+function Start-ServiceWait {
+    param([string]$Name, [int]$TimeoutSec = 120)
+    $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    if (-not $svc) { Write-Warn "Service '$Name' is not registered."; return }
+    if ($svc.Status -eq 'Running') { Write-Log "$Name already running"; return }
+    sc.exe start $Name *> $null
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 2
+        $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
+        if ($svc -and $svc.Status -eq 'Running') {
+            Write-Log "$Name is running"
+            return
+        }
+    }
+    $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
+    Write-Warn "$Name not running after $TimeoutSec s (status: $($svc.Status)) - check $logs"
+}
+
 Remove-ServiceIfPresent 'Navidrome'
 
 Write-Log "Registering Navidrome service..."
@@ -275,7 +299,7 @@ Write-Log "Registering Navidrome service..."
 & $nssm set Navidrome AppRotateFiles 1
 & $nssm set Navidrome AppRotateBytes 10485760
 & $nssm set Navidrome Start SERVICE_AUTO_START
-& $nssm start Navidrome
+Start-ServiceWait -Name 'Navidrome'
 
 Write-Log "Registering Lidarr service..."
 & $nssm install Lidarr (Join-Path $lidarrHome 'Lidarr.exe') " -data=`"$lidarrData`""
@@ -285,7 +309,7 @@ Write-Log "Registering Lidarr service..."
 & $nssm set Lidarr AppRotateFiles 1
 & $nssm set Lidarr AppRotateBytes 10485760
 & $nssm set Lidarr Start SERVICE_AUTO_START
-& $nssm start Lidarr
+Start-ServiceWait -Name 'Lidarr'
 
 # -------------------------------------------------------- lidarr post-config --
 Write-Log "Waiting for Lidarr API, then applying settings..."
