@@ -1,0 +1,10 @@
+# Secrets / local config — never commit settings.env (contains QBIT_PASSWORD, API keys)
+settings.env
+
+# Python
+__pycache__/
+*.pyc
+
+# OS junk
+.DS_Store
+Thumbs.db

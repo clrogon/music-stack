@@ -1,0 +1,29 @@
+{
+  "_notes": [
+    "Optional. Copy to config/indexers.json to have configure-lidarr.py register indexers in Lidarr automatically.",
+    "Each entry is passed verbatim to POST /api/v1/indexer. The schema follows the Servarr API: name/implementation/configContract/fields.",
+    "Private trackers: add username/password fields per that tracker's Cardigann definition.",
+    "Reality check: public trackers exist but are weak for music. A private music tracker or usenet indexer gives far better results."
+  ],
+  "indexers": [
+    {
+      "name": "1337x",
+      "implementation": "Cardigann",
+      "implementationName": "Cardigann",
+      "configContract": "CardigannSettings",
+      "protocol": "torrent",
+      "priority": 25,
+      "enableRss": true,
+      "enableAutomaticSearch": true,
+      "enableInteractiveSearch": true,
+      "supportsRss": true,
+      "supportsSearch": true,
+      "fields": [
+        { "name": "definitionFile", "value": "1337x" },
+        { "name": "baseUrl", "value": "https://1337x.to" },
+        { "name": "username", "value": "" },
+        { "name": "password", "value": "" }
+      ]
+    }
+  ]
+}
