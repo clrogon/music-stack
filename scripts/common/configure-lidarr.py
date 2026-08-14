@@ -201,7 +201,7 @@ def main() -> None:
         die("no Lidarr API key given (--api-key or LIDARR_API_KEY)")
     port = args.port or int(s.get("LIDARR_PORT", "8686") or "8686")
     qbit_host = "127.0.0.1"
-    qbit_port = args.qbit_port or int(s.get("QBIT_PORT", "8080") or "8080")
+    qbit_port = args.qbit_port or int(s.get("QBIT_PORT", "8443") or "8443")
     qbit_user = args.qbit_user or s.get("QBIT_USER", "admin") or "admin"
     qbit_password = args.qbit_password or s.get("QBIT_PASSWORD", "")
     if not qbit_password:

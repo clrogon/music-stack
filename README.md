@@ -8,7 +8,7 @@ Three services, one shared music folder:
 | --- | --- | --- | --- |
 | **Navidrome** | Scans `MUSIC_DIR` and streams it (web UI + any Subsonic app: Symfonium, DSub, iOS Music, etc.) | `4533` | `http://localhost:4533` |
 | **Lidarr** | Monitors artists you add, auto-downloads albums you're missing, tags + renames them into `MUSIC_DIR` | `8686` | `http://localhost:8686` |
-| **qBittorrent** | The download client Lidarr talks to | `8080` (WebUI) | `http://localhost:8080` |
+| **qBittorrent** | The download client Lidarr talks to | `8443` (WebUI) | `http://localhost:8443` |
 
 **The only contract between them is the filesystem:** Lidarr's *root folder* is the same directory as Navidrome's *MusicFolder*. Lidarr fills it; Navidrome scans and streams it. Nothing else connects them.
 
@@ -92,7 +92,7 @@ Every script is **idempotent** — safe to re-run; it downloads the correct bina
 | `DOWNLOAD_DIR` | qBittorrent's incomplete/downloads folder | `<DATA_DIR>/downloads` |
 | `NAVIDROME_PORT` | Navidrome HTTP port | `4533` |
 | `LIDARR_PORT` | Lidarr HTTP port | `8686` |
-| `QBIT_PORT` | qBittorrent WebUI port | `8080` |
+| `QBIT_PORT` | qBittorrent WebUI port | `8443` |
 | `QBIT_USER` | qBittorrent WebUI username | `admin` |
 | `QBIT_PASSWORD` | qBittorrent WebUI password (leave empty to auto-generate) | auto-generated |
 | `LIDARR_API_KEY` | Lidarr API key (leave empty to auto-generate) | auto |
@@ -130,7 +130,7 @@ bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.
 
 ## Access from other devices
 
-All services bind all interfaces (`0.0.0.0`). Use the machine's LAN IP (`ipconfig` / `ip addr`), or a Tailscale IP for remote listening. Ports: `4533` (Navidrome), `8686` (Lidarr), `8080` (qBittorrent WebUI). Only open these to the internet through a properly authenticated reverse proxy — they are auth-less or weakly authed by design.
+All services bind all interfaces (`0.0.0.0`). Use the machine's LAN IP (`ipconfig` / `ip addr`), or a Tailscale IP for remote listening. Ports: `4533` (Navidrome), `8686` (Lidarr), `8443` (qBittorrent WebUI). Only open these to the internet through a properly authenticated reverse proxy — they are auth-less or weakly authed by design.
 
 ## Compatibility notes
 
