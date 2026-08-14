@@ -6,6 +6,8 @@ recent first.
 
 ## Unreleased
 
+## v0.3.0 - Documentation
+
 ### Added
 
 - **Documentation**: `ARCHITECTURE.md` (the filesystem contract, platform-parity rule,
