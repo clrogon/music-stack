@@ -9,6 +9,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3-3776AB">
   <img alt="Status" src="https://img.shields.io/badge/Status-Active-success">
   <img alt="Release" src="https://img.shields.io/github/v/release/clrogon/music-stack">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
 </p>
 
 A personal, self-hosted music listening + library-completion stack, installed **natively** (no Docker) on three platforms: **Windows**, **macOS (Intel)**, and **Raspberry Pi**.
@@ -158,6 +159,12 @@ bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.
   config generation (BOM-less writes, PBKDF2), the post-config call, and the validation steps.
 - **[ROADMAP.md](ROADMAP.md)** — what's planned, in priority order.
 - **[CHANGELOG.md](CHANGELOG.md)** — version history.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to report issues and open pull requests.
+- **[SECURITY.md](SECURITY.md)** — supported versions and how to report vulnerabilities.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ## Access from other devices
 

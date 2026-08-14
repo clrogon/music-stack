@@ -8,9 +8,12 @@ recent first.
 
 ### Added
 
-- **Badges** (platform, languages, status, release) on the README.
+- **Badges** (platform, languages, status, release, license) on the README.
 - **Mermaid system-overview diagram** inline in the README (replaces the ASCII art).
 - **`ROADMAP.md`** — planned work in priority order, mirroring `ARCHITECTURE.md` §7 gaps.
+- **`LICENSE`** (MIT), **`CODE_OF_CONDUCT.md`**, **`CONTRIBUTING.md`**, **`SECURITY.md`**, and
+  GitHub issue/PR templates (`.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`).
+- README **License** section and links to `CONTRIBUTING.md` / `SECURITY.md`.
 
 ## v0.3.0 - Documentation
 
