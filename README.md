@@ -31,6 +31,10 @@ Three services, one shared music folder:
                           └────────────────────┘
 ```
 
+For the *why* behind this shape — the contract, the three-platform parity rule, and how
+configuration flows — see [`ARCHITECTURE.md`](ARCHITECTURE.md) (diagrams also kept as
+standalone Mermaid files in [`docs/diagrams/`](docs/diagrams)).
+
 ## One-liner install
 
 Nothing is assumed except the shell itself — the one-liner bootstraps its own package manager (winget on Windows, Homebrew on macOS) and, if `settings.env` does not exist yet, creates it with a **randomly generated** qBittorrent password (printed once — save it). No git, no Docker, no manual downloads.
@@ -127,6 +131,18 @@ Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSScriptAnalyzerSettings.psd1
 # bash syntax check (requires Git Bash or any bash):
 bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.sh scripts/install.sh
 ```
+
+## More documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — the filesystem contract, the three-platform parity
+  rule, the one-liner bootstrap chain, and how configuration flows; with Mermaid diagrams (also
+  in [`docs/diagrams/`](docs/diagrams)).
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** — common issues and fixes, written from real
+  incidents (Navidrome BOM parse errors, Lidarr's binary path and API-key requirements,
+  qBittorrent v5's WebUI traps).
+- **[MAINTENANCE.md](MAINTENANCE.md)** — for developers modifying the scripts: the parity rule,
+  config generation (BOM-less writes, PBKDF2), the post-config call, and the validation steps.
+- **[CHANGELOG.md](CHANGELOG.md)** — version history.
 
 ## Access from other devices
 

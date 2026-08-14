@@ -1,0 +1,11 @@
+flowchart LR
+    One["One-liner\ncurl | bash / irm | iex"] --> Fetch["Bootstrap:\nfetch repo tarball/zip\n(git not required)"]
+    Fetch -->|"install.sh"| Pkg["install missing package manager\n(Homebrew on macOS, apt is assumed on Pi)"]
+    Fetch -->|"install.ps1"| PkgW["install winget from\nofficial winget-cli GitHub release"]
+    Pkg --> Setup["Platform setup script\n(same for clone + one-liner paths)"]
+    PkgW --> Setup
+    Setup --> Settings["Ensure settings.env\n(auto-generates QBIT_PASSWORD,\nLIDARR_API_KEY if empty)"]
+    Settings --> Install["Install ffmpeg, Navidrome, Lidarr, qBittorrent"]
+    Install --> Conf["Write BOM-less configs\n(navidrome.toml, Lidarr config.xml,\nqBittorrent conf) + grant MUSIC_DIR access"]
+    Conf --> Svc["Register auto-start services"]
+    Svc --> Post["configure-lidarr.py over Lidarr REST API\n(root folder, qBittorrent client, renaming, indexers)"]

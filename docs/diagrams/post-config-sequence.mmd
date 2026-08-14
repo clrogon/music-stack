@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant S as Setup script
+    participant L as Lidarr (REST :8686)
+    participant Q as qBittorrent WebUI (:8443)
+    participant I as config/indexers.json
+
+    S->>L: GET /api/v1/system/status (wait until up)
+    S->>Q: TCP wait on 8443 (wait until WebUI bound)
+    S->>L: GET /qualityprofile, /metadataprofile (ids for root folder body)
+    alt root folder missing
+        S->>L: POST /rootfolder (full v3 body, path = MUSIC_DIR)
+    end
+    alt qBittorrent client missing
+        S->>Q: (credential check via WebUI login)
+        S->>L: POST /downloadclient (qBittorrent, creds from settings)
+    end
+    alt renaming disabled
+        S->>L: PUT /config/naming (enable track renaming)
+    end
+    opt indexers.json present
+        S->>I: read entries
+        S->>L: POST /indexer per entry
+    end

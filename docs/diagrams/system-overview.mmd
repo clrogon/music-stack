@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph Grab["Acquisition side"]
+        Lidarr["Lidarr — artist monitor +\nmatch against what you own"]
+        Qbit["qBittorrent — torrent client\n(only consumer of Lidarr's downloads)"]
+    end
+    subgraph Library["The shared contract"]
+        MusicDir["MUSIC_DIR\n(Lidarr root folder == Navidrome MusicFolder)"]
+    end
+    subgraph Stream["Listening side"]
+        Navidrome["Navidrome — scanner + streamer"]
+        Clients["Browser / Symfonium /\nDSub / iOS Music / ..."]
+    end
+
+    Lidarr -->|"grabs missing albums via the\nqBittorrent WebUI API (host, port, creds)"| Qbit
+    Qbit -->|"tags + renames into"| MusicDir
+    MusicDir -->|"file watcher + scan schedule"| Navidrome
+    Navidrome -->|"Subsonic API"| Clients
+
+    style MusicDir fill:#0a0a0a,stroke-dasharray: 5 5
