@@ -78,6 +78,29 @@ Depends on v0.4.0's CI to be safe to run unattended.
 
 ---
 
+## v0.6.0 - Discovery & Spotify parity
+
+Closes the biggest experiential gap versus Spotify: personalized recommendations, lyrics, and a
+listening recap. Comes from a gap analysis of the shipped stack against Spotify's core value
+props — the working checklist is `TODO.md`. Stays inside the native-install, no-Docker-by-default
+line from Orientation above: everything here is either Navidrome-native or a small stdlib script
+mirroring the existing `configure-lidarr.py` REST post-config pattern, not a new dependency
+surface.
+
+* **ListenBrainz-powered Discover Weekly / Daily Mix.** Navidrome already scrobbles natively to
+  ListenBrainz; add a `LISTENBRAINZ_TOKEN` setting and install the community
+  `navidrome-listenbrainz-daily-playlist` plugin so daily/weekly/exploration playlists generate
+  automatically — the closest native equivalent to Spotify's Discover Weekly and Daily Mix.
+* **Synced lyrics.** Navidrome displays `.lrc`/embedded lyrics but never fetches them. Add
+  `scripts/common/fetch-lyrics.py` (stdlib + the free, unauthenticated lrclib.net API) to backfill
+  missing `.lrc` files across `MUSIC_DIR`, idempotently.
+* **Yearly recap.** No install needed — ListenBrainz's own Year-in-Review page works automatically
+  once scrobbling is wired up above. Document it in the README rather than building anything.
+* Update `ARCHITECTURE.md` §5 and `MAINTENANCE.md` once the plugin wiring and lyrics script land,
+  since both add new components that speak to a service's API.
+
+---
+
 ## Future vision
 
 What's left after the gaps are closed — requires user secrets or a real feature decision, so it
@@ -86,6 +109,12 @@ stays out of the versioned work:
 * **Import-list automation.** Lidarr's Last.fm/Spotify import lists make "follow artists, get
   their missing albums" automatic, but need API keys. Automate their registration via the same
   REST-post-config pattern once a user supplies credentials.
+* **Auto-acquire recommended-but-missing tracks (opt-in, Docker).** Tools like `re-command`
+  chain ListenBrainz/Last.fm/LLM recommendations to an actual downloader (Soulseek/Deezer) and
+  drop results straight into `MUSIC_DIR` — the closest thing to "Spotify recommends it, and now
+  I own it," distinct from v0.6.0's native recommendation *playlists*. Docker-only with an
+  LLM/Deezer/Soulseek credential surface, so it ships as an explicitly opt-in appendix, never
+  the default install path, per the Docker non-goal below.
 * **Monitoring.** A per-service health page or `systemctl`/NSSM status digest; only meaningful
   once v0.4.0's smoke-test checker exists to build on.
 * **Podcasts.** Navidrome supports podcasts; folding them in changes the product's scope (a

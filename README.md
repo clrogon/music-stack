@@ -147,6 +147,17 @@ Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSScriptAnalyzerSettings.psd1
 bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.sh scripts/install.sh
 ```
 
+## Closing the gap with Spotify
+
+The stack already covers Spotify's core loop — stream your library from any device, auto-fill
+albums you're missing — plus manual/smart playlists, scrobbling, share links, and multi-user
+accounts, all via Navidrome and the Subsonic client ecosystem (Symfonium, DSub, Amperfy, iOS
+Music, etc.). What's not there yet, and how it's planned to be closed without breaking the
+native/no-Docker design line, is tracked in [`TODO.md`](TODO.md) and `ROADMAP.md`'s `v0.6.0`
+entry: personalized recommendations (a ListenBrainz-powered Discover Weekly/Daily Mix), synced
+lyrics, and a yearly listening recap. Auto-downloading recommended tracks and podcasts are
+deliberately out of the default install — see `ROADMAP.md`'s Future Vision section for why.
+
 ## More documentation
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — the filesystem contract, the three-platform parity
@@ -158,6 +169,7 @@ bash -n scripts/macos/setup.sh scripts/raspberry-pi/setup.sh scripts/common/lib.
 - **[MAINTENANCE.md](MAINTENANCE.md)** — for developers modifying the scripts: the parity rule,
   config generation (BOM-less writes, PBKDF2), the post-config call, and the validation steps.
 - **[ROADMAP.md](ROADMAP.md)** — what's planned, in priority order.
+- **[TODO.md](TODO.md)** — the near-term, checkbox-level working list behind the roadmap.
 - **[CHANGELOG.md](CHANGELOG.md)** — version history.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to report issues and open pull requests.
 - **[SECURITY.md](SECURITY.md)** — supported versions and how to report vulnerabilities.

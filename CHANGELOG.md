@@ -8,6 +8,15 @@ recent first.
 
 ### Added
 
+- **`TODO.md`** — near-term, checkbox-level working list behind `ROADMAP.md`, seeded from a gap
+  analysis of the stack against Spotify's core value props (recommendations, lyrics, recap).
+- **`ROADMAP.md` `v0.6.0` entry** ("Discovery & Spotify parity"): ListenBrainz-powered Discover
+  Weekly/Daily Mix playlists, synced-lyrics backfill, and a documented yearly recap — all native,
+  no new Docker dependency. Future Vision gained a matching opt-in, Docker-only entry for
+  auto-acquiring recommended-but-missing tracks (`re-command`-style), kept explicitly separate
+  from the native v0.6.0 work.
+- README **"Closing the gap with Spotify"** section summarizing current coverage vs. the gaps
+  above, plus a `TODO.md` link in the documentation list.
 - **CI validation pipeline** (`.github/workflows/validate.yml`): runs the `MAINTENANCE.md`
   "Testing" checks on every push/PR to `main` — `bash -n` on all four bash scripts, `py_compile`
   on `configure-lidarr.py` (Ubuntu job), and a parse + PSScriptAnalyzer pass (Warning-and-above
