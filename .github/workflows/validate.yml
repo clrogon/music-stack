@@ -1,0 +1,58 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bash-and-python:
+    name: Bash syntax + Python compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n on all bash scripts
+        run: |
+          bash -n scripts/install.sh
+          bash -n scripts/macos/setup.sh
+          bash -n scripts/raspberry-pi/setup.sh
+          bash -n scripts/common/lib.sh
+
+      - name: py_compile configure-lidarr.py
+        run: python3 -m py_compile scripts/common/configure-lidarr.py
+
+  windows-script:
+    name: Windows script parse + PSScriptAnalyzer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse Setup-MusicStack.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+              'scripts/windows/Setup-MusicStack.ps1', [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer (Warning and above fails)
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path scripts/windows/Setup-MusicStack.ps1 `
+              -Settings PSScriptAnalyzerSettings.psd1
+          if ($results) {
+            $results | Format-Table -AutoSize
+            throw "PSScriptAnalyzer found $($results.Count) issue(s) at Warning severity or above."
+          }

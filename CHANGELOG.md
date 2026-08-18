@@ -8,6 +8,10 @@ recent first.
 
 ### Added
 
+- **CI validation pipeline** (`.github/workflows/validate.yml`): runs the `MAINTENANCE.md`
+  "Testing" checks on every push/PR to `main` — `bash -n` on all four bash scripts, `py_compile`
+  on `configure-lidarr.py` (Ubuntu job), and a parse + PSScriptAnalyzer pass (Warning-and-above
+  fails) on `Setup-MusicStack.ps1` (Windows job).
 - **Badges** (platform, languages, status, release, license) on the README.
 - **Mermaid system-overview diagram** inline in the README (replaces the ASCII art).
 - **`ROADMAP.md`** — planned work in priority order, mirroring `ARCHITECTURE.md` §7 gaps.

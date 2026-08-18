@@ -48,9 +48,9 @@ for the per-script touchpoints.
   LaunchAgent, Windows has nothing, so a reboot leaves it off until you log in and start it
   manually. Evaluate an at-logon Scheduled Task (or NSSM supervision, if the GUI tolerates it)
   and document whichever is chosen. This is the biggest "not really a service" gap left.
-* **CI validation pipeline.** There is currently no CI: the checks in `MAINTENANCE.md` (bash -n,
-  PSScriptAnalyzer, `py_compile`) run by hand. Add a GitHub Actions workflow that runs them on
-  push/PR so a broken `lib.sh` or a new PSScriptAnalyzer finding can't merge.
+* **CI validation pipeline.** ✅ Delivered — `.github/workflows/validate.yml` runs the
+  `MAINTENANCE.md` checks (bash -n, PSScriptAnalyzer, `py_compile`) on push/PR to `main` so a
+  broken `lib.sh` or a new PSScriptAnalyzer finding can't merge.
 * **Pinned-URL link check.** Mirror dev-sandbox's weekly workflow that HEAD-checks every pinned
   fallback download URL, so a dead Navidrome/Lidarr/winget URL is caught within a week instead
   of at the next install.
