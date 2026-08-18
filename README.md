@@ -158,6 +158,10 @@ entry: personalized recommendations (a ListenBrainz-powered Discover Weekly/Dail
 lyrics, and a yearly listening recap. Auto-downloading recommended tracks and podcasts are
 deliberately out of the default install — see `ROADMAP.md`'s Future Vision section for why.
 
+That discovery work is currently **on hold behind reliability fixes** (see "Known limitations"
+below) — a pre-mortem on the project found that shipping recommendation playlists before fixing
+the ways acquisition can silently stop working would be solving the wrong problem first.
+
 ## More documentation
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — the filesystem contract, the three-platform parity
@@ -181,6 +185,26 @@ MIT — see [LICENSE](LICENSE).
 ## Access from other devices
 
 All services bind all interfaces (`0.0.0.0`). Use the machine's LAN IP (`ipconfig` / `ip addr`), or a Tailscale IP for remote listening. Ports: `4533` (Navidrome), `8686` (Lidarr), `8443` (qBittorrent WebUI). Only open these to the internet through a properly authenticated reverse proxy — they are auth-less or weakly authed by design.
+
+## Known limitations
+
+Honest gaps, tracked as `[P0]` items in [`ROADMAP.md`](ROADMAP.md) / [`TODO.md`](TODO.md) — found
+via a project pre-mortem, not yet fixed:
+
+- **qBittorrent doesn't restart itself after a reboot on Windows or macOS.** It's launched, not
+  supervised as a service (macOS's LaunchAgent is the exception). This is a **silent** failure:
+  Lidarr keeps running, Navidrome keeps serving your existing library, and nothing looks wrong
+  while new albums simply stop arriving. If your library stops growing, check that qBittorrent's
+  WebUI (`:8443`) is actually reachable before assuming Lidarr or an indexer is at fault.
+- **No backup guide yet.** Nothing here documents backing up `MUSIC_DIR`, `DATA_DIR`, or the
+  Navidrome/Lidarr databases. Back these up yourself in the meantime — a disk failure with no
+  backup is unrecoverable.
+- **No reverse-proxy example yet**, despite the recommendation below. If you expose these
+  services beyond your LAN/Tailscale, put a properly authenticated reverse proxy in front
+  yourself; none is scaffolded here today.
+- **No smoke test.** There's no scripted way to confirm the whole stack (ports, Lidarr health,
+  qBittorrent auth) is actually working end-to-end after a change — see `TROUBLESHOOTING.md`'s
+  manual checks in the meantime.
 
 ## Compatibility notes
 

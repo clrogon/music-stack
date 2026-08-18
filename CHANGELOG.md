@@ -8,6 +8,10 @@ recent first.
 
 ### Changed
 
+- **README** gained a **"Known limitations"** section listing the pre-mortem's `[P0]` gaps in
+  user-facing terms (qBittorrent's silent auto-start gap, no backup guide, no reverse-proxy
+  example, no smoke test) and a note in "Closing the gap with Spotify" that the Discovery work
+  is on hold behind these fixes.
 - **Roadmap reprioritized after a pre-mortem** ("imagine the project failed in 12 months — why?").
   Six new `[P0]` items land in `ROADMAP.md`'s `v0.4.0` section — Windows qBittorrent auto-start
   and the smoke-test script (the two most likely *silent*-failure causes), a backup/disaster-
