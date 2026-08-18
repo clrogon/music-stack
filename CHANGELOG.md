@@ -6,6 +6,17 @@ recent first.
 
 ## Unreleased
 
+### Changed
+
+- **Roadmap reprioritized after a pre-mortem** ("imagine the project failed in 12 months — why?").
+  Six new `[P0]` items land in `ROADMAP.md`'s `v0.4.0` section — Windows qBittorrent auto-start
+  and the smoke-test script (the two most likely *silent*-failure causes), a backup/disaster-
+  recovery guide, a reverse-proxy example config, live-install integration CI (current CI only
+  lints — it wouldn't have caught any of the four real upstream breakages already in
+  `TROUBLESHOOTING.md`), a real macOS/Pi install pass, and an indexer setup guide — and
+  `TODO.md` is restructured into P0/P1/P2 tiers with the same ordering. `v0.6.0` (Discovery &
+  Spotify parity) is now explicitly marked blocked until the P0 items land.
+
 ### Added
 
 - **`TODO.md`** — near-term, checkbox-level working list behind `ROADMAP.md`, seeded from a gap
